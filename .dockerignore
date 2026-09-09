@@ -1,7 +1,11 @@
 node_modules
 **/node_modules
 **/dist
-**/public
+# The control plane's public directory is Vite's *output*, rebuilt inside the
+# image — but this used to read `**/public`, which also excluded
+# apps/web/public, the source of the logo and favicons. The result was an
+# image that built cleanly and served a broken image icon.
+apps/control-plane/public
 data
 .git
 .env
