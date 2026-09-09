@@ -1,11 +1,25 @@
 <div align="center">
 
-<img src="docs/assets/logo.png" alt="" width="112" height="112">
+<img src="docs/assets/logo.png" alt="justpostgres" width="120" height="120">
 
 # justpostgres
 
 **A Postgres connection string, a table view, and a restore button.**<br>
 Self-hosted, in one command.
+
+<sub>
+  <a href="docs/INSTALL.md">Install</a> ·
+  <a href="docs/SECURITY.md">Security</a> ·
+  <a href="docs/ARCHITECTURE.md">Architecture</a> ·
+  <a href="docs/ROADMAP.md">Roadmap</a>
+</sub>
+
+<br>
+
+<sub>
+  Postgres 16 · 17 · 18 &nbsp;|&nbsp; point-in-time restore &nbsp;|&nbsp; branching &nbsp;|&nbsp;
+  connection pooling &nbsp;|&nbsp; backups to S3 or R2
+</sub>
 
 </div>
 
