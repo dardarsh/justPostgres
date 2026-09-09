@@ -1,0 +1,20 @@
+# TLS termination for the control plane.
+#
+# Caddy gets a certificate from Let's Encrypt on first request and renews it
+# without being asked, which is the whole reason it is here rather than nginx:
+# a self-hosted tool should not make its operator learn certbot.
+#
+# JP_DOMAIN is the hostname this instance answers on. Set it to `localhost` and
+# Caddy issues its own certificate instead of talking to Let's Encrypt, which is
+# how this file is tested without owning a domain.
+{$JP_DOMAIN} {
+	encode zstd gzip
+
+	# The control plane serves the API and the UI from one origin, so this is
+	# the only route there needs to be.
+	reverse_proxy control-plane:3000 {
+		# The audit log records who did what from where, and behind a proxy
+		# every request otherwise appears to come from the proxy.
+		header_up X-Forwarded-For {remote_host}
+	}
+}

@@ -1,0 +1,114 @@
+# justpostgres — single-node deployment.
+#
+# Two long-lived services today. The router (M2) and Caddy (M7) join them as
+# those milestones land; project Postgres containers are created at runtime by
+# the control plane, not declared here.
+
+services:
+  control-plane:
+    build:
+      context: .
+      dockerfile: apps/control-plane/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - docker-socket-proxy
+    environment:
+      JP_PORT: 3000
+      JP_DATA_DIR: /data
+      JP_LOG_LEVEL: ${JP_LOG_LEVEL:-info}
+      # Required. Generate with: openssl rand -base64 32
+      JP_MASTER_KEY: ${JP_MASTER_KEY:?JP_MASTER_KEY is required; generate one with "openssl rand -base64 32"}
+      # Optional. Unset, the first boot mints one and prints it to this service's
+      # log; either way it is required to create the admin account.
+      #   docker compose logs control-plane | grep jp_setup
+      JP_SETUP_TOKEN: ${JP_SETUP_TOKEN:-}
+      JP_DOCKER_HOST: tcp://docker-socket-proxy:2375
+      JP_PUBLIC_HOST: ${JP_PUBLIC_HOST:-localhost}
+      # Tells the UI to hand out routed connection strings.
+      JP_ROUTER_ENABLED: "true"
+      JP_ROUTER_PUBLIC_HOST: ${JP_ROUTER_PUBLIC_HOST:-${JP_PUBLIC_HOST:-localhost}}
+      JP_ROUTER_SESSION_PORT: ${JP_ROUTER_SESSION_PORT:-5432}
+      JP_ROUTER_POOL_PORT: ${JP_ROUTER_POOL_PORT:-6543}
+      # The data browser connects to project containers on the host.
+      JP_PROJECT_CONNECT_HOST: ${JP_PROJECT_CONNECT_HOST:-host.docker.internal}
+      JP_PORT_RANGE_START: ${JP_PORT_RANGE_START:-55000}
+      JP_PORT_RANGE_END: ${JP_PORT_RANGE_END:-55999}
+    ports:
+      # JP_HTTP_PORT is the host port; the container always listens on 3000.
+      # Bound to loopback by default — put a TLS proxy in front rather than
+      # exposing the control plane directly.
+      - "${JP_BIND_ADDR:-127.0.0.1}:${JP_HTTP_PORT:-3000}:3000"
+    # Project containers publish their own host ports directly, so this range
+    # has to be reachable on the host. It disappears once the router lands.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # Control-plane metadata. This is the single most important thing to back
+      # up on the host: it holds every project's credentials and backup config.
+      - control-plane-data:/data
+
+  # The data path. Every project is unreachable while this is down, so it is a
+  # separate service from the control plane on purpose: restarting or upgrading
+  # the control plane must not interrupt live database connections. It reads the
+  # metadata store read-only and never depends on the control plane being up.
+  router:
+    build:
+      context: .
+      dockerfile: apps/router/Dockerfile
+    restart: unless-stopped
+    environment:
+      JP_DATA_DIR: /data
+      JP_MASTER_KEY: ${JP_MASTER_KEY:?JP_MASTER_KEY is required; generate one with "openssl rand -base64 32"}
+      JP_LOG_LEVEL: ${JP_LOG_LEVEL:-info}
+      # Project containers publish on the host, so that is where the router
+      # reaches them. On Linux this is the docker0 gateway.
+      JP_ROUTER_BACKEND_HOST: ${JP_ROUTER_BACKEND_HOST:-host.docker.internal}
+      JP_POOL_SIZE: ${JP_POOL_SIZE:-10}
+      # Wildcard TLS enables SNI routing (<ref>.db.example.com). Without it,
+      # clients use the username form <role>.<project-ref>.
+      JP_ROUTER_TLS_CERT: ${JP_ROUTER_TLS_CERT:-}
+      JP_ROUTER_TLS_KEY: ${JP_ROUTER_TLS_KEY:-}
+      JP_ROUTER_DOMAIN_SUFFIX: ${JP_ROUTER_DOMAIN_SUFFIX:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${JP_ROUTER_BIND_ADDR:-0.0.0.0}:${JP_ROUTER_SESSION_PORT:-5432}:5432"
+      - "${JP_ROUTER_BIND_ADDR:-0.0.0.0}:${JP_ROUTER_POOL_PORT:-6543}:6543"
+    volumes:
+      # Read-only: the router reads the routing table, it never writes it.
+      - control-plane-data:/data:ro
+
+  # The control plane needs the Docker API, which is root-equivalent on the
+  # host. This proxy allowlists only the endpoints it actually uses, so a
+  # compromised control plane is not additionally a trivial host takeover
+  # (ARCHITECTURE §3).
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:0.3.0
+    restart: unless-stopped
+    environment:
+      # Read.
+      VERSION: 1
+      INFO: 1
+      CONTAINERS: 1
+      IMAGES: 1
+      VOLUMES: 1
+      NETWORKS: 1
+      EXEC: 1
+      # Write. Required to provision projects from M1 on.
+      POST: 1
+      # Explicitly denied: these are the endpoints that turn API access into
+      # host access.
+      AUTH: 0
+      SECRETS: 0
+      SWARM: 0
+      SYSTEM: 0
+      PLUGINS: 0
+      CONFIGS: 0
+      NODES: 0
+      SERVICES: 0
+      TASKS: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+volumes:
+  control-plane-data:

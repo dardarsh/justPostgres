@@ -1,0 +1,14 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# Postinstall scripts are blocked by default. Only these two need to run:
+# better-sqlite3 compiles a native addon, esbuild fetches its platform binary.
+# The rest are transitive deps of dockerode whose native paths are optional
+# accelerations we do not need, so they stay denied.
+allowBuilds:
+  better-sqlite3: true
+  esbuild: true
+  cpu-features: false
+  protobufjs: false
+  ssh2: false

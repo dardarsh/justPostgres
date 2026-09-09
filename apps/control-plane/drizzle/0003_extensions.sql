@@ -1,0 +1,1 @@
+ALTER TABLE `projects` ADD `preload_libraries` text;

@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+/*
+ * Theme tokens, defined once for light and redefined for dark. Components
+ * reference the semantic names only, so a future theme swap touches this file
+ * and nothing else.
+ */
+@theme {
+  --color-surface: #ffffff;
+  --color-surface-raised: #f8fafc;
+  --color-surface-sunken: #f1f5f9;
+  --color-border: #e2e8f0;
+  --color-border-strong: #cbd5e1;
+  --color-content: #0f172a;
+  --color-content-muted: #64748b;
+  --color-content-subtle: #94a3b8;
+  --color-accent: #0f766e;
+  --color-accent-content: #ffffff;
+  --color-ok: #15803d;
+  --color-warn: #b45309;
+  --color-danger: #b91c1c;
+}
+
+@media (prefers-color-scheme: dark) {
+  @theme {
+    --color-surface: #0b1016;
+    --color-surface-raised: #121a23;
+    --color-surface-sunken: #080c11;
+    --color-border: #1e293b;
+    --color-border-strong: #334155;
+    --color-content: #e2e8f0;
+    --color-content-muted: #94a3b8;
+    --color-content-subtle: #64748b;
+    --color-accent: #2dd4bf;
+    --color-accent-content: #042f2e;
+    --color-ok: #4ade80;
+    --color-warn: #fbbf24;
+    --color-danger: #f87171;
+  }
+}
+
+html {
+  color-scheme: light dark;
+}
+
+body {
+  background-color: var(--color-surface);
+  color: var(--color-content);
+  -webkit-font-smoothing: antialiased;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+code, pre, .mono {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}

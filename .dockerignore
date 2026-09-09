@@ -1,0 +1,10 @@
+node_modules
+**/node_modules
+**/dist
+**/public
+data
+.git
+.env
+.env.local
+*.sqlite*
+docs

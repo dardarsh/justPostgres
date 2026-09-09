@@ -1,0 +1,41 @@
+# TLS termination, as an overlay.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.tls.yml up -d
+#
+# Kept separate from the base file because it is the one part of the deployment
+# that needs a domain name. Without it the control plane stays on loopback and
+# is reached over an SSH tunnel, which is a perfectly good answer for one
+# operator and a bad one for a team.
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - control-plane
+    environment:
+      JP_DOMAIN: ${JP_DOMAIN:?JP_DOMAIN is required for TLS, e.g. db.example.com}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates and ACME account keys. Losing this means re-issuing on
+      # every restart, which Let's Encrypt rate-limits.
+      - caddy-data:/data
+      - caddy-config:/config
+
+  # Caddy is now the only thing that should reach the control plane, so it stops
+  # publishing a host port of its own.
+  control-plane:
+    ports: !override []
+    environment:
+      # Caddy is on the compose network, so its X-Forwarded-For is the one
+      # header worth believing. Without this the control plane would attribute
+      # every request to the proxy's own address and the audit log would be
+      # useless — and with a wider list than this, the header becomes forgeable
+      # again by anything that can reach the port.
+      JP_TRUSTED_PROXIES: ${JP_TRUSTED_PROXIES:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
+
+volumes:
+  caddy-data:
+  caddy-config:

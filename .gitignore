@@ -1,0 +1,14 @@
+node_modules/
+dist/
+# Vite builds the UI straight into the control plane's static directory, and the
+# Dockerfile builds it during the image build. Committing it would mean every UI
+# change showing up twice in a diff.
+apps/control-plane/public/
+*.tsbuildinfo
+.env
+.env.local
+data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+.DS_Store

@@ -1,0 +1,1 @@
+ALTER TABLE `api_configs` ADD `host_port` integer;

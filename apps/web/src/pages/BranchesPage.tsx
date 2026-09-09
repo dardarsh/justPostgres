@@ -1,0 +1,246 @@
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import type { BranchNode } from "@justpostgres/shared";
+import { Badge, Button, Card, Input, Modal, PageHeader, Select, relativeTime } from "../components/ui.js";
+import { api, ApiError } from "../lib/api.js";
+
+function toLocalInputValue(ms: number): string {
+  return new Date(ms - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 19);
+}
+
+function CreateBranchModal({ projectId, onClose }: { projectId: string; onClose: () => void }) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [from, setFrom] = useState<"now" | "time">("now");
+  const [when, setWhen] = useState(toLocalInputValue(Date.now() - 3600_000));
+  const [name, setName] = useState("");
+  const [ttl, setTtl] = useState(24);
+
+  const targetTime = from === "time" ? new Date(when).getTime() : undefined;
+
+  // The plan is fetched for the exact request being composed, because the two
+  // strategies differ by orders of magnitude and the reason is not something a
+  // user should have to infer from how long it took.
+  const { data: plan } = useQuery({
+    queryKey: ["branch-plan", projectId, targetTime ?? "now"],
+    queryFn: () => api.branchPlan(projectId, targetTime),
+  });
+
+  const create = useMutation({
+    mutationFn: () =>
+      api.createBranch(projectId, {
+        ...(targetTime !== undefined ? { targetTime } : {}),
+        ...(name.trim() ? { name: name.trim() } : {}),
+        ttlHours: ttl,
+      }),
+    onSuccess: (data) => {
+      void queryClient.invalidateQueries({ queryKey: ["projects"] });
+      void queryClient.invalidateQueries({ queryKey: ["branches", projectId] });
+      onClose();
+      navigate(`/projects/${data.project.id}`);
+    },
+  });
+
+  return (
+    <Modal
+      title="New branch"
+      description="A full, independent copy of this project that you can break freely."
+      onClose={onClose}
+    >
+      <div className="space-y-4">
+        <div className="flex gap-1">
+          {(["now", "time"] as const).map((option) => (
+            <button
+              key={option}
+              onClick={() => setFrom(option)}
+              className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
+                from === option
+                  ? "bg-surface-sunken font-medium text-content"
+                  : "text-content-muted hover:text-content"
+              }`}
+            >
+              {option === "now" ? "From right now" : "From a point in time"}
+            </button>
+          ))}
+        </div>
+
+        {from === "time" ? (
+          <Input
+            label="Branch point"
+            type="datetime-local"
+            step={1}
+            value={when}
+            onChange={(e) => setWhen(e.target.value)}
+          />
+        ) : null}
+
+        {plan ? (
+          <div
+            className={`rounded-md px-3 py-2 text-xs ${
+              plan.plan.method === "cow" ? "bg-ok/10 text-ok" : "bg-surface-sunken text-content-muted"
+            }`}
+          >
+            <span className="font-medium">
+              {plan.plan.method === "cow" ? "Copy-on-write" : "Point-in-time restore"}
+            </span>
+            <span className="mt-0.5 block">{plan.plan.reason}</span>
+          </div>
+        ) : null}
+
+        <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="auto" />
+
+        <Select
+          label="Delete automatically after"
+          value={ttl}
+          onChange={(e) => setTtl(Number(e.target.value))}
+          hint="Branches are made to be thrown away. The ones nobody throws away are the ones that quietly fill a host."
+        >
+          <option value={1}>1 hour</option>
+          <option value={24}>1 day</option>
+          <option value={168}>1 week</option>
+          <option value={0}>Never — keep it until I delete it</option>
+        </Select>
+
+        {create.error ? (
+          <p className="rounded-md bg-danger/10 px-3 py-2 text-xs text-danger">
+            {create.error instanceof ApiError ? create.error.message : "Could not create the branch."}
+          </p>
+        ) : null}
+
+        <div className="flex justify-end gap-2 pt-1">
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button disabled={create.isPending} onClick={() => create.mutate()}>
+            {create.isPending ? "Creating…" : "Create branch"}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function TreeRow({
+  node,
+  depth,
+  currentId,
+  onPin,
+}: {
+  node: BranchNode;
+  depth: number;
+  currentId: string;
+  onPin: (id: string, ttlHours: number | null) => void;
+}) {
+  const { project } = node;
+  const isCurrent = project.id === currentId;
+  const expiring = node.expiresAt !== null;
+
+  return (
+    <>
+      <tr className={`border-b border-border last:border-0 ${isCurrent ? "bg-surface-sunken/50" : ""}`}>
+        <td className="px-4 py-2.5">
+          <span style={{ paddingLeft: `${depth * 16}px` }} className="inline-flex items-baseline gap-2">
+            {depth > 0 ? <span className="text-content-subtle">└</span> : null}
+            <Link to={`/projects/${project.id}`} className="font-medium hover:text-accent">
+              {project.name}
+            </Link>
+            <span className="mono text-xs text-content-subtle">{project.ref}</span>
+          </span>
+        </td>
+        <td className="px-4 py-2.5">
+          {node.method ? (
+            <Badge tone={node.method === "cow" ? "ok" : "neutral"}>
+              {node.method === "cow" ? "copy-on-write" : "point-in-time"}
+            </Badge>
+          ) : (
+            <span className="text-xs text-content-subtle">root</span>
+          )}
+        </td>
+        <td className="px-4 py-2.5 text-xs text-content-muted">
+          {project.branchPoint ? relativeTime(project.branchPoint) : "—"}
+        </td>
+        <td className="px-4 py-2.5 text-xs">
+          {expiring ? (
+            <span className="text-warn">deleted {relativeTime(node.expiresAt)}</span>
+          ) : (
+            <span className="text-content-subtle">pinned</span>
+          )}
+        </td>
+        <td className="px-4 py-2.5 text-right">
+          {project.parentProjectId ? (
+            <button
+              onClick={() => onPin(project.id, expiring ? null : 24)}
+              className="text-xs text-content-muted hover:text-content"
+            >
+              {expiring ? "Keep" : "Expire in 24h"}
+            </button>
+          ) : null}
+        </td>
+      </tr>
+      {node.children.map((child) => (
+        <TreeRow key={child.project.id} node={child} depth={depth + 1} currentId={currentId} onPin={onPin} />
+      ))}
+    </>
+  );
+}
+
+export default function BranchesPage() {
+  const { id = "" } = useParams();
+  const queryClient = useQueryClient();
+  const [creating, setCreating] = useState(false);
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["branches", id],
+    queryFn: () => api.branches(id),
+    refetchInterval: 5000,
+  });
+
+  const setExpiry = useMutation({
+    mutationFn: ({ projectId, ttlHours }: { projectId: string; ttlHours: number | null }) =>
+      api.setBranchExpiry(projectId, ttlHours),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["branches", id] }),
+  });
+
+  return (
+    <>
+      <PageHeader
+        title="Branches"
+        description="A branch is a full, independent copy — its own container, its own backups, its own connection string. Break it freely; the parent never notices."
+        actions={<Button onClick={() => setCreating(true)}>New branch</Button>}
+      />
+
+      {isLoading ? (
+        <Card className="px-6 py-14 text-center text-sm text-content-muted">Loading…</Card>
+      ) : error || !data ? (
+        <Card className="px-6 py-14 text-center text-sm text-danger">
+          {error instanceof ApiError ? error.message : "Could not load the branch tree."}
+        </Card>
+      ) : (
+        <Card>
+          <table className="w-full text-sm">
+            <thead className="border-b border-border text-left text-xs uppercase tracking-wide text-content-subtle">
+              <tr>
+                <th className="px-4 py-2.5 font-medium">Project</th>
+                <th className="px-4 py-2.5 font-medium">Made by</th>
+                <th className="px-4 py-2.5 font-medium">Branch point</th>
+                <th className="px-4 py-2.5 font-medium">Lifetime</th>
+                <th className="px-4 py-2.5" />
+              </tr>
+            </thead>
+            <tbody>
+              <TreeRow
+                node={data.tree}
+                depth={0}
+                currentId={id}
+                onPin={(projectId, ttlHours) => setExpiry.mutate({ projectId, ttlHours })}
+              />
+            </tbody>
+          </table>
+        </Card>
+      )}
+
+      {creating ? <CreateBranchModal projectId={id} onClose={() => setCreating(false)} /> : null}
+    </>
+  );
+}
