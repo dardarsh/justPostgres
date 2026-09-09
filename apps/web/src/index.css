@@ -4,39 +4,116 @@
  * Theme tokens, defined once for light and redefined for dark. Components
  * reference the semantic names only, so a future theme swap touches this file
  * and nothing else.
+ *
+ * The accent is the blue from the logo. It was teal, which is a perfectly good
+ * colour and belonged to a different product — an interface whose accent
+ * disagrees with its own mark reads as unfinished before anyone can say why.
  */
 @theme {
   --color-surface: #ffffff;
-  --color-surface-raised: #f8fafc;
+  --color-surface-raised: #ffffff;
   --color-surface-sunken: #f1f5f9;
-  --color-border: #e2e8f0;
+  /* One step above the page, for nav bars and table headers. */
+  --color-surface-overlay: #f8fafc;
+  --color-border: #e6eaf0;
   --color-border-strong: #cbd5e1;
-  --color-content: #0f172a;
-  --color-content-muted: #64748b;
-  --color-content-subtle: #94a3b8;
-  --color-accent: #0f766e;
+  --color-content: #0b1220;
+  --color-content-muted: #55637a;
+  --color-content-subtle: #8b97ab;
+
+  --color-accent: #1d63d8;
+  --color-accent-hover: #1a56bd;
   --color-accent-content: #ffffff;
+  /* Tint for selected rows and subtle accent fills. */
+  --color-accent-soft: #eaf1fd;
+
   --color-ok: #15803d;
   --color-warn: #b45309;
-  --color-danger: #b91c1c;
+  --color-danger: #be123c;
+
+  --shadow-card: 0 1px 2px rgb(11 18 32 / 0.05), 0 1px 3px rgb(11 18 32 / 0.04);
+  --shadow-raised: 0 4px 12px rgb(11 18 32 / 0.08), 0 1px 3px rgb(11 18 32 / 0.06);
+  --shadow-overlay: 0 16px 48px rgb(11 18 32 / 0.18);
 }
 
 @media (prefers-color-scheme: dark) {
   @theme {
     --color-surface: #0b1016;
-    --color-surface-raised: #121a23;
+    --color-surface-raised: #111823;
     --color-surface-sunken: #080c11;
-    --color-border: #1e293b;
-    --color-border-strong: #334155;
-    --color-content: #e2e8f0;
-    --color-content-muted: #94a3b8;
+    --color-surface-overlay: #0e141d;
+    --color-border: #1d2836;
+    --color-border-strong: #2f3d4f;
+    --color-content: #e7edf5;
+    --color-content-muted: #93a1b5;
     --color-content-subtle: #64748b;
-    --color-accent: #2dd4bf;
-    --color-accent-content: #042f2e;
+
+    --color-accent: #4d93ff;
+    --color-accent-hover: #6ba4ff;
+    --color-accent-content: #06101f;
+    --color-accent-soft: #12213a;
+
     --color-ok: #4ade80;
     --color-warn: #fbbf24;
-    --color-danger: #f87171;
+    --color-danger: #fb7185;
+
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-raised: 0 4px 16px rgb(0 0 0 / 0.45);
+    --shadow-overlay: 0 20px 60px rgb(0 0 0 / 0.6);
   }
+}
+
+/*
+ * The same dark palette again, this time for an explicit choice.
+ *
+ * `@theme` inside a media query only reacts to the OS. These two rules let the
+ * in-app toggle override it in both directions, and they win on specificity
+ * because `:root[data-theme]` beats the bare `:root` Tailwind generates.
+ */
+:root[data-theme="dark"] {
+  --color-surface: #0b1016;
+  --color-surface-raised: #111823;
+  --color-surface-sunken: #080c11;
+  --color-surface-overlay: #0e141d;
+  --color-border: #1d2836;
+  --color-border-strong: #2f3d4f;
+  --color-content: #e7edf5;
+  --color-content-muted: #93a1b5;
+  --color-content-subtle: #64748b;
+  --color-accent: #4d93ff;
+  --color-accent-hover: #6ba4ff;
+  --color-accent-content: #06101f;
+  --color-accent-soft: #12213a;
+  --color-ok: #4ade80;
+  --color-warn: #fbbf24;
+  --color-danger: #fb7185;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-raised: 0 4px 16px rgb(0 0 0 / 0.45);
+  --shadow-overlay: 0 20px 60px rgb(0 0 0 / 0.6);
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-surface-sunken: #f1f5f9;
+  --color-surface-overlay: #f8fafc;
+  --color-border: #e6eaf0;
+  --color-border-strong: #cbd5e1;
+  --color-content: #0b1220;
+  --color-content-muted: #55637a;
+  --color-content-subtle: #8b97ab;
+  --color-accent: #1d63d8;
+  --color-accent-hover: #1a56bd;
+  --color-accent-content: #ffffff;
+  --color-accent-soft: #eaf1fd;
+  --color-ok: #15803d;
+  --color-warn: #b45309;
+  --color-danger: #be123c;
+  --shadow-card: 0 1px 2px rgb(11 18 32 / 0.05), 0 1px 3px rgb(11 18 32 / 0.04);
+  --shadow-raised: 0 4px 12px rgb(11 18 32 / 0.08), 0 1px 3px rgb(11 18 32 / 0.06);
+  --shadow-overlay: 0 16px 48px rgb(11 18 32 / 0.18);
+  color-scheme: light;
 }
 
 html {
@@ -47,9 +124,60 @@ body {
   background-color: var(--color-surface);
   color: var(--color-content);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Tabular figures everywhere: sizes, ports and counts sit in columns, and
+     proportional digits make them visibly ragged. */
+  font-variant-numeric: tabular-nums;
 }
 
 code, pre, .mono {
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-feature-settings: "liga" 0;
+}
+
+/*
+ * One focus style for the whole app, on `:focus-visible` only — so it appears
+ * for keyboard navigation and not on every mouse click. Without this the
+ * browser default was being suppressed by Tailwind's reset in places, which
+ * makes the app unusable without a mouse.
+ */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: var(--color-accent-content);
+}
+
+/*
+ * Scrollbars inside data tables and the SQL editor. Left alone on the page
+ * itself, where the platform default is what people expect.
+ */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+.scroll-thin::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: 8px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

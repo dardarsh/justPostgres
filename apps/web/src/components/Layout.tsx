@@ -1,5 +1,7 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import ThemeToggle from "./ThemeToggle.js";
+import { Wordmark } from "./ui.js";
 import { api, type AdminSummary } from "../lib/api.js";
 
 const NAV = [
@@ -9,16 +11,46 @@ const NAV = [
   { to: "/instance", label: "Instance" },
 ];
 
-function StatusDot({ status }: { status: "ok" | "degraded" | "down" | "unknown" }) {
-  const color =
-    status === "ok"
-      ? "bg-ok"
-      : status === "degraded"
-        ? "bg-warn"
-        : status === "down"
-          ? "bg-danger"
-          : "bg-content-subtle";
-  return <span className={`inline-block size-2 rounded-full ${color}`} aria-hidden />;
+const STATUS_COLOR = {
+  ok: "bg-ok",
+  degraded: "bg-warn",
+  down: "bg-danger",
+  unknown: "bg-content-subtle",
+} as const;
+
+const STATUS_LABEL = {
+  ok: "All systems normal",
+  degraded: "Degraded — see Health",
+  down: "Something is down — see Health",
+  unknown: "Connecting to the control plane",
+} as const;
+
+/**
+ * Health, as a dot rather than a word.
+ *
+ * It was a dot and the word "ok", which spends a third of the header saying
+ * the least interesting thing on the page. The dot carries the state, the
+ * tooltip carries the detail, and only a problem gets to use words.
+ */
+function HealthPill({ status }: { status: keyof typeof STATUS_COLOR }) {
+  return (
+    <NavLink
+      to="/health"
+      title={STATUS_LABEL[status]}
+      className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-content-muted transition-colors hover:bg-surface-sunken hover:text-content"
+    >
+      <span className="relative flex h-2 w-2" aria-hidden>
+        {status !== "ok" ? (
+          <span
+            className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 ${STATUS_COLOR[status]}`}
+          />
+        ) : null}
+        <span className={`relative inline-flex h-2 w-2 rounded-full ${STATUS_COLOR[status]}`} />
+      </span>
+      <span className="sr-only">{STATUS_LABEL[status]}</span>
+      {status !== "ok" ? <span className="hidden sm:inline">{status}</span> : null}
+    </NavLink>
+  );
 }
 
 export default function Layout({ admin }: { admin: AdminSummary | null }) {
@@ -37,23 +69,24 @@ export default function Layout({ admin }: { admin: AdminSummary | null }) {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-border bg-surface-raised">
-        <div className="mx-auto flex max-w-6xl items-center gap-6 px-6 py-3">
-          <div className="flex items-baseline gap-2">
-            <span className="mono text-sm font-semibold tracking-tight">justpostgres</span>
-            <span className="text-xs text-content-subtle">{health?.version ?? ""}</span>
-          </div>
+      {/* Sticky, because the nav is how you get between a project's tabs and
+          the rest of the instance, and long tables put it off screen. */}
+      <header className="sticky top-0 z-40 border-b border-border bg-surface-overlay/85 backdrop-blur-md">
+        <div className="mx-auto flex max-w-7xl items-center gap-3 px-6 py-2.5">
+          <NavLink to="/projects" className="mr-1 flex items-center" aria-label="justpostgres">
+            <Wordmark />
+          </NavLink>
 
-          <nav className="flex gap-1">
+          <nav className="flex items-center gap-0.5">
             {NAV.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  `rounded-md px-3 py-1.5 text-sm transition-colors ${
+                  `rounded-lg px-3 py-1.5 text-sm transition-colors ${
                     isActive
-                      ? "bg-surface-sunken font-medium text-content"
-                      : "text-content-muted hover:text-content"
+                      ? "bg-accent-soft font-medium text-accent"
+                      : "text-content-muted hover:bg-surface-sunken hover:text-content"
                   }`
                 }
               >
@@ -62,29 +95,39 @@ export default function Layout({ admin }: { admin: AdminSummary | null }) {
             ))}
           </nav>
 
-          <div className="ml-auto flex items-center gap-4 text-xs text-content-muted">
-            <span className="flex items-center gap-2">
-              <StatusDot status={health?.status ?? "unknown"} />
-              {health ? health.status : "connecting…"}
-            </span>
+          <div className="ml-auto flex items-center gap-1">
+            <HealthPill status={health?.status ?? "unknown"} />
+            <ThemeToggle />
             {admin ? (
-              <span className="flex items-center gap-2">
-                <span className="text-content-subtle">{admin.email}</span>
+              <>
+                <span
+                  className="hidden max-w-[16rem] truncate px-2 text-xs text-content-subtle md:inline"
+                  title={admin.email}
+                >
+                  {admin.email}
+                </span>
                 <button
                   onClick={() => logout.mutate()}
-                  className="rounded-md px-2 py-1 hover:bg-surface-sunken hover:text-content"
+                  className="rounded-lg px-2.5 py-1.5 text-xs text-content-muted transition-colors hover:bg-surface-sunken hover:text-content"
                 >
                   Sign out
                 </button>
-              </span>
+              </>
             ) : null}
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-6 py-8">
+      <main className="mx-auto max-w-7xl px-6 py-8">
         <Outlet />
       </main>
+
+      <footer className="mx-auto max-w-7xl px-6 pb-8 pt-2">
+        <p className="text-xs text-content-subtle">
+          justpostgres {health?.version ?? ""}
+          {health ? ` · up ${Math.floor(health.uptimeSeconds / 3600)}h` : ""}
+        </p>
+      </footer>
     </div>
   );
 }

@@ -110,31 +110,50 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+/** States that are still moving, so the badge animates rather than sitting still. */
+const TRANSIENT = new Set(["creating", "deleting", "upgrading"]);
+
 function ProjectRow({ project }: { project: Project }) {
   return (
-    <tr className="border-b border-border last:border-0 hover:bg-surface-sunken/50">
-      <td className="px-4 py-3">
-        <Link to={`/projects/${project.id}`} className="font-medium hover:text-accent">
+    /*
+     * The whole row is the link target, via an overlay anchor rather than an
+     * anchor per cell. Making only the name clickable is the kind of thing that
+     * is fine the first time and irritating the hundredth.
+     */
+    <tr className="group relative border-b border-border transition-colors last:border-0 hover:bg-accent-soft/60">
+      <td className="relative px-5 py-3.5">
+        <Link
+          to={`/projects/${project.id}`}
+          className="font-medium transition-colors group-hover:text-accent after:absolute after:inset-0 after:content-['']"
+        >
           {project.name}
         </Link>
         <div className="mono mt-0.5 text-xs text-content-subtle">{project.ref}</div>
       </td>
-      <td className="px-4 py-3">
-        <Badge tone={projectStateTone(project.state)}>{project.state}</Badge>
+      <td className="px-5 py-3.5">
+        <Badge tone={projectStateTone(project.state)} dot pulse={TRANSIENT.has(project.state)}>
+          {project.state}
+        </Badge>
         {project.lastError ? (
           <div className="mt-1 max-w-xs truncate text-xs text-danger" title={project.lastError}>
             {project.lastError}
           </div>
         ) : null}
       </td>
-      <td className="px-4 py-3 text-content-muted">Postgres {project.pgMajor}</td>
-      <td className="px-4 py-3 text-content-muted">
+      <td className="px-5 py-3.5 text-content-muted">Postgres {project.pgMajor}</td>
+      <td className="px-5 py-3.5 text-content-muted">
         {formatBytes(project.memoryBytes)} · {(project.nanoCpus / 1e9).toFixed(1)} CPU
       </td>
-      <td className="mono px-4 py-3 text-content-muted">
-        {project.hostPort ?? "—"}
+      <td className="mono px-5 py-3.5 text-content-muted">{project.hostPort ?? "—"}</td>
+      <td className="px-5 py-3.5 text-content-muted">{relativeTime(project.createdAt)}</td>
+      <td className="w-8 pr-4 text-right">
+        <span
+          aria-hidden
+          className="inline-block text-content-subtle opacity-0 transition-opacity group-hover:opacity-100"
+        >
+          →
+        </span>
       </td>
-      <td className="px-4 py-3 text-content-muted">{relativeTime(project.createdAt)}</td>
     </tr>
   );
 }
@@ -161,7 +180,15 @@ export default function ProjectsPage() {
       />
 
       {isLoading ? (
-        <Card className="px-6 py-14 text-center text-sm text-content-muted">Loading…</Card>
+        <Card className="divide-y divide-border">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="flex items-center gap-4 px-5 py-4">
+              <div className="h-4 w-40 animate-pulse rounded bg-surface-sunken" />
+              <div className="h-4 w-20 animate-pulse rounded-full bg-surface-sunken" />
+              <div className="ml-auto h-4 w-24 animate-pulse rounded bg-surface-sunken" />
+            </div>
+          ))}
+        </Card>
       ) : error ? (
         <Card className="px-6 py-14 text-center text-sm text-danger">
           {error instanceof ApiError ? error.message : "Could not load projects."}
@@ -172,24 +199,27 @@ export default function ProjectsPage() {
           description="Create one and you get a Postgres connection string in about a minute — the first project on a version has to pull the image."
         />
       ) : (
-        <Card>
-          <table className="w-full text-sm">
-            <thead className="border-b border-border text-left text-xs uppercase tracking-wide text-content-subtle">
-              <tr>
-                <th className="px-4 py-2.5 font-medium">Project</th>
-                <th className="px-4 py-2.5 font-medium">State</th>
-                <th className="px-4 py-2.5 font-medium">Version</th>
-                <th className="px-4 py-2.5 font-medium">Resources</th>
-                <th className="px-4 py-2.5 font-medium">Port</th>
-                <th className="px-4 py-2.5 font-medium">Created</th>
-              </tr>
-            </thead>
-            <tbody>
-              {projects.map((project) => (
-                <ProjectRow key={project.id} project={project} />
-              ))}
-            </tbody>
-          </table>
+        <Card className="overflow-hidden">
+          <div className="scroll-thin overflow-x-auto">
+            <table className="w-full min-w-[52rem] text-sm">
+              <thead className="border-b border-border bg-surface-overlay text-left text-[11px] uppercase tracking-[0.06em] text-content-subtle">
+                <tr>
+                  <th className="px-5 py-3 font-semibold">Project</th>
+                  <th className="px-5 py-3 font-semibold">State</th>
+                  <th className="px-5 py-3 font-semibold">Version</th>
+                  <th className="px-5 py-3 font-semibold">Resources</th>
+                  <th className="px-5 py-3 font-semibold">Port</th>
+                  <th className="px-5 py-3 font-semibold">Created</th>
+                  <th className="w-8" />
+                </tr>
+              </thead>
+              <tbody>
+                {projects.map((project) => (
+                  <ProjectRow key={project.id} project={project} />
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Card>
       )}
 

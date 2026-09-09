@@ -141,16 +141,20 @@ function ConnectionCard({ projectId, disabled }: { projectId: string; disabled: 
   const active = endpoints[Math.min(selected, endpoints.length - 1)];
 
   return (
-    <Card className="p-4">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex gap-1">
+    <Card className="p-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        {/* A segmented control, not three loose buttons — these are one choice
+            with three options, and the old styling made the unselected ones
+            look like separate actions. */}
+        <div className="inline-flex rounded-lg border border-border bg-surface-sunken p-0.5">
           {endpoints.map((endpoint, index) => (
             <button
               key={endpoint.kind}
               onClick={() => setSelected(index)}
-              className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
+              aria-pressed={index === selected}
+              className={`rounded-[7px] px-3 py-1.5 text-sm transition-colors ${
                 index === selected
-                  ? "bg-surface-sunken font-medium text-content"
+                  ? "bg-surface-raised font-medium text-content shadow-card"
                   : "text-content-muted hover:text-content"
               }`}
             >
@@ -158,7 +162,7 @@ function ConnectionCard({ projectId, disabled }: { projectId: string; disabled: 
             </button>
           ))}
         </div>
-        <Button variant="secondary" onClick={() => setRevealed((v) => !v)}>
+        <Button variant="secondary" size="sm" onClick={() => setRevealed((v) => !v)}>
           {revealed ? "Hide password" : "Reveal password"}
         </Button>
       </div>

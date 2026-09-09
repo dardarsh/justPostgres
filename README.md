@@ -1,6 +1,15 @@
+<div align="center">
+
+<img src="docs/assets/logo.png" alt="" width="112" height="112">
+
 # justpostgres
 
-**A Postgres connection string, a table view, and a restore button. Self-hosted, in one command.**
+**A Postgres connection string, a table view, and a restore button.**<br>
+Self-hosted, in one command.
+
+</div>
+
+---
 
 Most people reaching for Supabase or Appwrite want one thing: a fresh Postgres they can
 connect to, a way to look at their data, and the confidence that they can get yesterday

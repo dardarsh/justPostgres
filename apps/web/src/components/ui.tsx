@@ -1,5 +1,38 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { ProjectState } from "@justpostgres/shared";
+
+/**
+ * The mark, at a size the layout asks for.
+ *
+ * Two source files rather than one scaled down: the nav renders it at 28px and
+ * a 256px PNG scaled that far is both wasteful and slightly mushy. The browser
+ * picks by intrinsic size, so the small file is used where it fits.
+ */
+export function Logo({ size = 28, className = "" }: { size?: number; className?: string }) {
+  return (
+    <img
+      src={size > 96 ? "/logo.png" : "/logo-128.png"}
+      alt=""
+      width={size}
+      height={size}
+      className={`shrink-0 select-none ${className}`}
+      style={{ width: size, height: size }}
+      draggable={false}
+    />
+  );
+}
+
+/** The mark and the name, as they appear together. */
+export function Wordmark({ size = 28 }: { size?: number }) {
+  return (
+    <span className="flex items-center gap-2.5">
+      <Logo size={size} />
+      <span className="text-[15px] font-semibold tracking-tight">
+        just<span className="text-accent">postgres</span>
+      </span>
+    </span>
+  );
+}
 
 export function PageHeader({
   title,
@@ -11,19 +44,48 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <div className="mb-6 flex items-start justify-between gap-4">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
-        {description ? <p className="mt-1 text-sm text-content-muted">{description}</p> : null}
+    <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+      <div className="min-w-0">
+        <h1 className="text-2xl font-semibold tracking-[-0.02em]">{title}</h1>
+        {description ? (
+          <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-content-muted">{description}</p>
+        ) : null}
       </div>
-      {actions ? <div className="flex shrink-0 gap-2">{actions}</div> : null}
+      {actions ? <div className="flex shrink-0 flex-wrap gap-2">{actions}</div> : null}
     </div>
   );
 }
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`rounded-lg border border-border bg-surface-raised ${className}`}>{children}</div>
+    <div
+      className={`rounded-xl border border-border bg-surface-raised shadow-card ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** A titled section of a card, so pages stop hand-rolling the same header row. */
+export function CardHeader({
+  title,
+  description,
+  actions,
+}: {
+  title: ReactNode;
+  description?: ReactNode;
+  actions?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-4">
+      <div className="min-w-0">
+        <h2 className="text-sm font-semibold">{title}</h2>
+        {description ? (
+          <p className="mt-1 max-w-2xl text-xs leading-relaxed text-content-muted">{description}</p>
+        ) : null}
+      </div>
+      {actions ? <div className="flex shrink-0 gap-2">{actions}</div> : null}
+    </div>
   );
 }
 
@@ -37,11 +99,34 @@ export function EmptyState({
   hint?: ReactNode;
 }) {
   return (
-    <Card className="px-6 py-14 text-center">
-      <p className="text-sm font-medium">{title}</p>
-      <p className="mx-auto mt-2 max-w-md text-sm text-content-muted">{description}</p>
-      {hint ? <div className="mt-5 text-sm text-content-subtle">{hint}</div> : null}
+    <Card className="px-6 py-16 text-center">
+      <Logo size={40} className="mx-auto opacity-40" />
+      <p className="mt-4 text-sm font-semibold">{title}</p>
+      <p className="mx-auto mt-1.5 max-w-md text-sm leading-relaxed text-content-muted">
+        {description}
+      </p>
+      {hint ? <div className="mt-6 text-sm text-content-subtle">{hint}</div> : null}
     </Card>
+  );
+}
+
+/** A small inline spinner, so a pending button says so without changing width. */
+export function Spinner({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      className={`h-3.5 w-3.5 animate-spin ${className}`}
+      viewBox="0 0 16 16"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeOpacity="0.25" strokeWidth="2.5" />
+      <path
+        d="M14.5 8a6.5 6.5 0 0 0-6.5-6.5"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
 
@@ -49,28 +134,43 @@ export function Button({
   children,
   onClick,
   variant = "primary",
+  size = "md",
   disabled,
+  loading,
   type = "button",
+  title,
+  className = "",
 }: {
   children: ReactNode;
   onClick?: () => void;
-  variant?: "primary" | "secondary" | "danger";
+  variant?: "primary" | "secondary" | "danger" | "ghost";
+  size?: "sm" | "md";
   disabled?: boolean;
+  /** Shows a spinner and blocks the click, without the caller disabling it. */
+  loading?: boolean;
   type?: "button" | "submit";
+  title?: string;
+  className?: string;
 }) {
   const styles = {
-    primary: "bg-accent text-accent-content hover:opacity-90",
-    secondary: "border border-border-strong text-content hover:bg-surface-sunken",
-    danger: "border border-border-strong text-danger hover:bg-surface-sunken",
+    primary: "bg-accent text-accent-content hover:bg-accent-hover shadow-card",
+    secondary: "border border-border-strong bg-surface-raised text-content hover:bg-surface-sunken",
+    danger: "border border-danger/35 bg-surface-raised text-danger hover:bg-danger/10",
+    ghost: "text-content-muted hover:bg-surface-sunken hover:text-content",
   }[variant];
+
+  const sizing = size === "sm" ? "px-2.5 py-1 text-xs" : "px-3.5 py-2 text-sm";
 
   return (
     <button
       type={type}
       onClick={onClick}
-      disabled={disabled}
-      className={`rounded-md px-3 py-1.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-40 ${styles}`}
+      disabled={disabled || loading}
+      title={title}
+      aria-busy={loading || undefined}
+      className={`inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-45 ${sizing} ${styles} ${className}`}
     >
+      {loading ? <Spinner /> : null}
       {children}
     </button>
   );
@@ -84,17 +184,36 @@ const BADGE_TONES = {
   accent: "bg-accent/12 text-accent",
 } as const;
 
+const BADGE_DOTS = {
+  neutral: "bg-content-subtle",
+  ok: "bg-ok",
+  warn: "bg-warn",
+  danger: "bg-danger",
+  accent: "bg-accent",
+} as const;
+
 export function Badge({
   children,
   tone = "neutral",
+  dot = false,
+  pulse = false,
 }: {
   children: ReactNode;
   tone?: keyof typeof BADGE_TONES;
+  /** A coloured dot before the label, for states rather than counts. */
+  dot?: boolean;
+  /** Animates the dot, for states that are actively changing. */
+  pulse?: boolean;
 }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${BADGE_TONES[tone]}`}
+      className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${BADGE_TONES[tone]}`}
     >
+      {dot ? (
+        <span
+          className={`h-1.5 w-1.5 shrink-0 rounded-full ${BADGE_DOTS[tone]} ${pulse ? "animate-pulse" : ""}`}
+        />
+      ) : null}
       {children}
     </span>
   );
@@ -137,7 +256,7 @@ export function Input({
       <span className="mb-1.5 block text-xs font-medium text-content-muted">{label}</span>
       <input
         {...props}
-        className="w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
+        className="w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-sm transition-colors placeholder:text-content-subtle hover:border-content-subtle focus:border-accent"
       />
       {hint ? <span className="mt-1.5 block text-xs text-content-subtle">{hint}</span> : null}
     </label>
@@ -155,7 +274,7 @@ export function Select({
       <span className="mb-1.5 block text-xs font-medium text-content-muted">{label}</span>
       <select
         {...props}
-        className="w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
+        className="w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-sm transition-colors hover:border-content-subtle focus:border-accent"
       >
         {children}
       </select>
@@ -169,24 +288,45 @@ export function Modal({
   description,
   onClose,
   children,
+  wide = false,
 }: {
   title: string;
   description?: string;
   onClose: () => void;
   children: ReactNode;
+  wide?: boolean;
 }) {
+  // Escape closes it, and the page behind stops scrolling while it is open.
+  // Both are things people try without thinking, and their absence reads as
+  // the dialog being broken rather than unimplemented.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previous;
+    };
+  }, [onClose]);
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-6 pt-24"
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/55 p-6 pt-20 backdrop-blur-[2px]"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-lg border border-border bg-surface-raised p-6 shadow-xl"
+        className={`w-full ${wide ? "max-w-2xl" : "max-w-md"} rounded-xl border border-border bg-surface-raised p-6 shadow-overlay`}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-base font-semibold">{title}</h2>
+        <h2 className="text-base font-semibold tracking-tight">{title}</h2>
         {description ? (
-          <p className="mt-1 text-sm text-content-muted">{description}</p>
+          <p className="mt-1.5 text-sm leading-relaxed text-content-muted">{description}</p>
         ) : null}
         <div className="mt-5">{children}</div>
       </div>

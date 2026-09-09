@@ -3,7 +3,35 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      name="description"
+      content="Self-hosted Postgres projects: a connection string, a table view, and point-in-time restore."
+    />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon-64.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>justpostgres</title>
+    <style>
+      /*
+       * Painted before React mounts, so the first frame is the app's own
+       * background rather than a flash of white on a dark theme.
+       */
+      html { background: #ffffff; }
+      @media (prefers-color-scheme: dark) { html { background: #0b1016; } }
+    </style>
+    <script>
+      // Applied before the first paint. Doing this in React instead means a
+      // frame of the wrong theme on every load, which is the flash every
+      // dark-mode implementation is judged by.
+      try {
+        var t = localStorage.getItem("jp-theme");
+        if (t === "light" || t === "dark") {
+          document.documentElement.setAttribute("data-theme", t);
+          document.documentElement.style.background = t === "dark" ? "#0b1016" : "#ffffff";
+        }
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
