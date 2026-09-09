@@ -7,7 +7,11 @@ apps/control-plane/public/
 *.tsbuildinfo
 .env
 .env.local
-data/
+# Anchored to the repository root. Unanchored, `data/` matches a directory of
+# that name at ANY depth — which silently excluded apps/control-plane/src/data,
+# seven source files, from every commit. The clone built locally and failed the
+# moment anything checked it out fresh.
+/data/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
