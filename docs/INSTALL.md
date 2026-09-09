@@ -466,6 +466,24 @@ allocates is blocked while deletes still work. Check **Health**, then free space
 **Cannot reach the UI from outside.** In option B, check `JP_BIND_ADDR=0.0.0.0` is in `.env` (and that
 you restarted), then the firewall, then the provider's own firewall.
 
+**You forgot the administrator password.** There is no reset link — this instance has no email
+channel to send one through. Recover from the host instead:
+
+```bash
+docker compose exec control-plane node dist/index.js reset-admin
+docker compose restart control-plane
+docker compose logs control-plane | grep jp_setup
+```
+
+That removes the administrator account and nothing else, so the instance becomes unclaimed and mints
+a fresh setup token. Claim it again with the new token and whatever password you want. **Your
+projects, their data, their credentials and their backups are untouched, and every database keeps
+running throughout** — only the management UI is briefly unclaimed. The reset is written to the audit
+log, which outlives the account it describes.
+
+To change a password you still know, use **Instance → Administrator password**. No downtime, and no
+need for any of the above.
+
 **Check the Health page first.** It reports the database, Docker, the job worker, storage and disk
 separately, and stays up when any of them is down.
 

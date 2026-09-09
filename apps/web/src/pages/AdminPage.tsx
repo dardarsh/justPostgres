@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AuditEntry } from "@justpostgres/shared";
-import { Badge, Button, Card, PageHeader, formatBytes } from "../components/ui.js";
+import { Badge, Button, Card, CardHeader, Input, PageHeader, formatBytes } from "../components/ui.js";
 import ObjectStorageCard from "../components/ObjectStorageCard.js";
 import { api, ApiError } from "../lib/api.js";
 
@@ -92,6 +92,94 @@ function AuditRow({ entry }: { entry: AuditEntry }) {
   );
 }
 
+/**
+ * Changing the administrator password.
+ *
+ * The endpoint existed and nothing called it, which meant the only way to
+ * rotate the one credential that opens every database on the host was to lose
+ * it and recover from the host. Rotation should not require an outage.
+ */
+function ChangePassword() {
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const change = useMutation({
+    mutationFn: () => api.changePassword(current, next),
+    onSuccess: () => {
+      setCurrent("");
+      setNext("");
+      setConfirm("");
+      setError(null);
+      setDone(true);
+      setTimeout(() => setDone(false), 4000);
+    },
+    onError: (err) => setError(err instanceof ApiError ? err.message : String(err)),
+  });
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setDone(false);
+    if (next !== confirm) {
+      setError("The new passwords do not match.");
+      return;
+    }
+    setError(null);
+    change.mutate();
+  };
+
+  return (
+    <Card className="mb-6">
+      <CardHeader
+        title="Administrator password"
+        description="There is one account on this instance and it holds superuser credentials for every database on the host. Changing it here signs nothing else out."
+      />
+      <form onSubmit={submit} className="grid gap-4 px-5 py-4 sm:grid-cols-3">
+        <Input
+          label="Current password"
+          type="password"
+          autoComplete="current-password"
+          value={current}
+          onChange={(e) => setCurrent(e.target.value)}
+          required
+        />
+        <Input
+          label="New password"
+          type="password"
+          autoComplete="new-password"
+          value={next}
+          onChange={(e) => setNext(e.target.value)}
+          required
+        />
+        <Input
+          label="Confirm new password"
+          type="password"
+          autoComplete="new-password"
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          required
+        />
+
+        <div className="sm:col-span-3">
+          {error ? <p className="mb-3 text-xs text-danger">{error}</p> : null}
+          {done ? <p className="mb-3 text-xs text-ok">Password changed.</p> : null}
+          <Button type="submit" loading={change.isPending} disabled={!current || !next}>
+            Change password
+          </Button>
+          <p className="mt-3 text-xs leading-relaxed text-content-subtle">
+            Forgotten it instead? There is no reset link — recover from the host with{" "}
+            <span className="mono">docker compose exec control-plane node dist/index.js reset-admin</span>,
+            which removes the account so the instance can be claimed again. Projects and their data
+            are untouched.
+          </p>
+        </div>
+      </form>
+    </Card>
+  );
+}
+
 export default function AdminPage() {
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
@@ -130,6 +218,8 @@ export default function AdminPage() {
       {error ? (
         <Card className="mb-4 border-danger/40 px-4 py-3 text-sm text-danger">{error}</Card>
       ) : null}
+
+      <ChangePassword />
 
       <ObjectStorageCard />
 

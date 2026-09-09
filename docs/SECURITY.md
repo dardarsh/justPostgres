@@ -138,6 +138,14 @@ organisation model, which is the hosted service arriving early.
 What is there: scrypt password hashing, session tokens hashed at rest, per-address login lockout, and
 both failed logins and failed setup attempts written to the audit log.
 
+**There is no password reset, and recovery needs the host.** A reset link requires an email channel
+this product does not have, and a security question is worse than nothing — so a forgotten password
+is recovered with `reset-admin`, run on the host, which removes the account and lets the instance be
+claimed again through the ordinary first-run flow. That deliberately sets the bar at shell access:
+anyone with it could edit the SQLite file by hand anyway, and anyone without it cannot get in by
+forgetting a password. The reset is audited, and it never touches project credentials — those stay
+encrypted under `JP_MASTER_KEY`, which the command neither knows nor needs.
+
 ---
 
 ## Claiming a fresh instance

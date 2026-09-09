@@ -98,7 +98,8 @@ Open http://localhost:3000 and claim it with that token — there is no default 
 | **[On a VPS, no domain](docs/INSTALL.md#b-run-it-on-a-vps-without-a-domain)** | Plain HTTP at `http://YOUR_IP:8080`, no certificate needed |
 | **[On a VPS, with a domain](docs/INSTALL.md#c-run-it-on-a-vps-with-a-domain-and-https)** | `https://db.example.com`, certificate issued and renewed for you |
 
-It also covers the firewall rule you should not skip, sending backups to S3 or R2, and upgrades.
+It also covers the firewall rule you should not skip, sending backups to S3 or R2, upgrades, and
+what to do if you forget the administrator password.
 
 - [Security](docs/SECURITY.md) — what is protected, what is not, and what you must decide
 - [Architecture](docs/ARCHITECTURE.md) — how it works and why

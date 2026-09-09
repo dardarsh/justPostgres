@@ -23,6 +23,7 @@ import { createDataStore } from "./storage/datastore.js";
 import { DiskMonitor } from "./storage/disk.js";
 import { UpgradeService } from "./upgrades/service.js";
 import { ControlPlaneBackupService } from "./admin/cp-backup.js";
+import { resetAdmin } from "./admin/reset-admin.js";
 import { MetricsService } from "./metrics/service.js";
 import { ObjectStorageService } from "./backups/object-storage.js";
 
@@ -36,7 +37,31 @@ function resolveMigrationsDir(): string {
   return fileURLToPath(new URL("../../drizzle", import.meta.url));
 }
 
+/**
+ * Commands that operate on the data directory and exit, rather than serving.
+ *
+ * Run against a live deployment with `docker compose exec`, so they see the
+ * same volume and the same environment the server does — which matters,
+ * because everything here depends on `JP_MASTER_KEY` being the right one.
+ */
+async function runCommand(command: string): Promise<boolean> {
+  if (command !== "reset-admin") return false;
+
+  const config = loadConfig();
+  const logger = createLogger(config);
+  await resetAdmin(config, logger, resolveMigrationsDir());
+  return true;
+}
+
 async function main(): Promise<void> {
+  const command = process.argv[2];
+  if (command && (await runCommand(command))) return;
+  if (command && command !== "serve") {
+    throw new Error(
+      `Unknown command "${command}". Available: serve (default), reset-admin.`,
+    );
+  }
+
   const config = loadConfig();
   const logger = createLogger(config);
 
