@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
-import { Badge, Button, Card, Input, Modal, PageHeader, formatBytes, relativeTime } from "../components/ui.js";
+import { Badge, Button, Card, Input, Loading, Modal, PageHeader, formatBytes, relativeTime } from "../components/ui.js";
 import { api, ApiError } from "../lib/api.js";
 
 function formatWhen(ms: number | null): string {
@@ -98,7 +98,7 @@ function RestoreModal({
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button disabled={restore.isPending} onClick={() => restore.mutate()}>
+          <Button loading={restore.isPending} onClick={() => restore.mutate()}>
             {restore.isPending ? "Starting…" : "Restore"}
           </Button>
         </div>
@@ -169,7 +169,7 @@ function MoveToObjectStorage({ projectId, repoType }: { projectId: string; repoT
           </p>
           {error ? <p className="mt-2 text-xs text-danger">{error}</p> : null}
         </div>
-        <Button onClick={() => migrate.mutate()} disabled={migrate.isPending}>
+        <Button onClick={() => migrate.mutate()} loading={migrate.isPending}>
           {migrate.isPending ? "Moving…" : "Move to object storage"}
         </Button>
       </div>
@@ -201,7 +201,7 @@ export default function BackupsPage() {
   });
 
   if (isLoading) {
-    return <Card className="px-6 py-14 text-center text-sm text-content-muted">Loading…</Card>;
+    return <Loading rows={2} />;
   }
   if (error || !data) {
     return (
@@ -221,10 +221,10 @@ export default function BackupsPage() {
         description="Continuous write-ahead log archiving, so this project can be restored to any moment in its recovery window — not just to last night."
         actions={
           <>
-            <Button variant="secondary" disabled={verify.isPending} onClick={() => verify.mutate()}>
+            <Button variant="secondary" loading={verify.isPending} onClick={() => verify.mutate()}>
               Verify restore
             </Button>
-            <Button variant="secondary" disabled={runBackup.isPending} onClick={() => runBackup.mutate()}>
+            <Button variant="secondary" loading={runBackup.isPending} onClick={() => runBackup.mutate()}>
               Back up now
             </Button>
             <Button disabled={status.awaitingFirstBackup} onClick={() => setRestoring(true)}>
@@ -345,7 +345,7 @@ export default function BackupsPage() {
               restored project.
             </p>
           </div>
-          <Button variant="secondary" disabled={promote.isPending} onClick={() => promote.mutate()}>
+          <Button variant="secondary" loading={promote.isPending} onClick={() => promote.mutate()}>
             {promote.isPending ? "Promoting…" : "Promote"}
           </Button>
         </div>

@@ -157,7 +157,7 @@ export default function UpgradePage() {
                   <Button
                     variant="secondary"
                     onClick={() => discard.mutate(u.id)}
-                    disabled={discard.isPending}
+                    loading={discard.isPending}
                   >
                     Delete old data
                   </Button>
@@ -202,7 +202,7 @@ export default function UpgradePage() {
                 </Button>
                 <Button
                   onClick={() => start.mutate()}
-                  disabled={start.isPending || !plan.data.imageAvailable}
+                  loading={start.isPending} disabled={!plan.data.imageAvailable}
                 >
                   {start.isPending ? "Starting…" : `Upgrade to ${target}`}
                 </Button>

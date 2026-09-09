@@ -101,7 +101,7 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" disabled={create.isPending || name.trim().length === 0}>
+          <Button type="submit" loading={create.isPending} disabled={name.trim().length === 0}>
             {create.isPending ? "Creating…" : "Create project"}
           </Button>
         </div>

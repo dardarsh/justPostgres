@@ -122,7 +122,7 @@ function ExposeModal({
             Cancel
           </Button>
           <Button
-            disabled={expose.isPending || privileges.length === 0 || (template?.needsColumn && !column)}
+            loading={expose.isPending} disabled={privileges.length === 0 || (template?.needsColumn && !column)}
             onClick={() => expose.mutate()}
           >
             {expose.isPending ? "Applying…" : "Expose"}
@@ -208,15 +208,15 @@ export default function ApiPage() {
         actions={
           s?.enabled ? (
             <>
-              <Button variant="secondary" disabled={rotate.isPending} onClick={() => rotate.mutate()}>
+              <Button variant="secondary" loading={rotate.isPending} onClick={() => rotate.mutate()}>
                 Rotate keys
               </Button>
-              <Button variant="danger" disabled={disable.isPending} onClick={() => disable.mutate()}>
+              <Button variant="danger" loading={disable.isPending} onClick={() => disable.mutate()}>
                 Disable
               </Button>
             </>
           ) : (
-            <Button disabled={enable.isPending} onClick={() => enable.mutate()}>
+            <Button loading={enable.isPending} onClick={() => enable.mutate()}>
               {enable.isPending ? "Enabling…" : "Enable the API"}
             </Button>
           )

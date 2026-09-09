@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ComponentHealth, ComponentStatus, FilesystemUsage } from "@justpostgres/shared";
 import { api } from "../lib/api.js";
-import { Badge, Card, PageHeader } from "../components/ui.js";
+import { Badge, Card, Loading, PageHeader } from "../components/ui.js";
 
 const TONE: Record<ComponentStatus, "ok" | "warn" | "danger"> = {
   ok: "ok",
@@ -85,7 +85,7 @@ export default function HealthPage() {
       />
 
       {isLoading ? (
-        <Card className="px-6 py-14 text-center text-sm text-content-muted">Loading…</Card>
+        <Loading rows={4} />
       ) : error || !data ? (
         <Card className="px-6 py-14 text-center text-sm text-danger">
           Could not reach the control plane.

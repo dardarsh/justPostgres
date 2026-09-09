@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Job, JobState } from "@justpostgres/shared";
 import { api } from "../lib/api.js";
-import { Badge, Button, Card, PageHeader, ProgressBar, relativeTime } from "../components/ui.js";
+import { Badge, Button, Card, Loading, PageHeader, ProgressBar, relativeTime } from "../components/ui.js";
 
 const STATE_TONE: Record<JobState, "neutral" | "ok" | "warn" | "danger" | "accent"> = {
   queued: "neutral",
@@ -95,14 +95,14 @@ export default function JobsPage() {
           <>
             <Button
               variant="secondary"
-              disabled={enqueue.isPending}
+              loading={enqueue.isPending}
               onClick={() => enqueue.mutate({ steps: 20, stepDurationMs: 1500 })}
             >
               Run 30s job
             </Button>
             <Button
               variant="secondary"
-              disabled={enqueue.isPending}
+              loading={enqueue.isPending}
               onClick={() => enqueue.mutate({ steps: 5, stepDurationMs: 500, failAtStep: 3 })}
             >
               Run failing job
@@ -126,7 +126,7 @@ export default function JobsPage() {
 
       <Card>
         {isLoading ? (
-          <div className="px-6 py-14 text-center text-sm text-content-muted">Loading…</div>
+          <Loading rows={4} />
         ) : jobs.length === 0 ? (
           <div className="px-6 py-14 text-center">
             <p className="text-sm font-medium">No jobs yet</p>

@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import AccountMenu from "./AccountMenu.js";
 import ThemeToggle from "./ThemeToggle.js";
 import { Wordmark } from "./ui.js";
 import { api, type AdminSummary } from "../lib/api.js";
@@ -54,17 +55,10 @@ function HealthPill({ status }: { status: keyof typeof STATUS_COLOR }) {
 }
 
 export default function Layout({ admin }: { admin: AdminSummary | null }) {
-  const queryClient = useQueryClient();
-
   const { data: health } = useQuery({
     queryKey: ["health"],
     queryFn: api.health,
     refetchInterval: 10_000,
-  });
-
-  const logout = useMutation({
-    mutationFn: api.logout,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["auth"] }),
   });
 
   return (
@@ -98,22 +92,7 @@ export default function Layout({ admin }: { admin: AdminSummary | null }) {
           <div className="ml-auto flex items-center gap-1">
             <HealthPill status={health?.status ?? "unknown"} />
             <ThemeToggle />
-            {admin ? (
-              <>
-                <span
-                  className="hidden max-w-[16rem] truncate px-2 text-xs text-content-subtle md:inline"
-                  title={admin.email}
-                >
-                  {admin.email}
-                </span>
-                <button
-                  onClick={() => logout.mutate()}
-                  className="rounded-lg px-2.5 py-1.5 text-xs text-content-muted transition-colors hover:bg-surface-sunken hover:text-content"
-                >
-                  Sign out
-                </button>
-              </>
-            ) : null}
+            {admin ? <AccountMenu admin={admin} /> : null}
           </div>
         </div>
       </header>

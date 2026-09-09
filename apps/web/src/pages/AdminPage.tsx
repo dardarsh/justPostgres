@@ -92,94 +92,6 @@ function AuditRow({ entry }: { entry: AuditEntry }) {
   );
 }
 
-/**
- * Changing the administrator password.
- *
- * The endpoint existed and nothing called it, which meant the only way to
- * rotate the one credential that opens every database on the host was to lose
- * it and recover from the host. Rotation should not require an outage.
- */
-function ChangePassword() {
-  const [current, setCurrent] = useState("");
-  const [next, setNext] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [done, setDone] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const change = useMutation({
-    mutationFn: () => api.changePassword(current, next),
-    onSuccess: () => {
-      setCurrent("");
-      setNext("");
-      setConfirm("");
-      setError(null);
-      setDone(true);
-      setTimeout(() => setDone(false), 4000);
-    },
-    onError: (err) => setError(err instanceof ApiError ? err.message : String(err)),
-  });
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setDone(false);
-    if (next !== confirm) {
-      setError("The new passwords do not match.");
-      return;
-    }
-    setError(null);
-    change.mutate();
-  };
-
-  return (
-    <Card className="mb-6">
-      <CardHeader
-        title="Administrator password"
-        description="There is one account on this instance and it holds superuser credentials for every database on the host. Changing it here signs nothing else out."
-      />
-      <form onSubmit={submit} className="grid gap-4 px-5 py-4 sm:grid-cols-3">
-        <Input
-          label="Current password"
-          type="password"
-          autoComplete="current-password"
-          value={current}
-          onChange={(e) => setCurrent(e.target.value)}
-          required
-        />
-        <Input
-          label="New password"
-          type="password"
-          autoComplete="new-password"
-          value={next}
-          onChange={(e) => setNext(e.target.value)}
-          required
-        />
-        <Input
-          label="Confirm new password"
-          type="password"
-          autoComplete="new-password"
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-          required
-        />
-
-        <div className="sm:col-span-3">
-          {error ? <p className="mb-3 text-xs text-danger">{error}</p> : null}
-          {done ? <p className="mb-3 text-xs text-ok">Password changed.</p> : null}
-          <Button type="submit" loading={change.isPending} disabled={!current || !next}>
-            Change password
-          </Button>
-          <p className="mt-3 text-xs leading-relaxed text-content-subtle">
-            Forgotten it instead? There is no reset link — recover from the host with{" "}
-            <span className="mono">docker compose exec control-plane node dist/index.js reset-admin</span>,
-            which removes the account so the instance can be claimed again. Projects and their data
-            are untouched.
-          </p>
-        </div>
-      </form>
-    </Card>
-  );
-}
-
 export default function AdminPage() {
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
@@ -219,8 +131,6 @@ export default function AdminPage() {
         <Card className="mb-4 border-danger/40 px-4 py-3 text-sm text-danger">{error}</Card>
       ) : null}
 
-      <ChangePassword />
-
       <ObjectStorageCard />
 
       <Card className="mb-6">
@@ -238,7 +148,7 @@ export default function AdminPage() {
               one theft, not two.
             </p>
           </div>
-          <Button variant="secondary" onClick={() => run.mutate()} disabled={run.isPending}>
+          <Button variant="secondary" onClick={() => run.mutate()} loading={run.isPending}>
             {run.isPending ? "Backing up…" : "Back up now"}
           </Button>
         </div>
@@ -272,7 +182,7 @@ export default function AdminPage() {
                 <Button
                   variant="secondary"
                   onClick={() => verify.mutate(b.name)}
-                  disabled={verify.isPending}
+                  loading={verify.isPending}
                 >
                   Verify
                 </Button>
@@ -306,7 +216,7 @@ export default function AdminPage() {
 
       <Card>
         {audit.isLoading ? (
-          <p className="px-4 py-8 text-center text-sm text-content-muted">Loading…</p>
+          <p className="px-5 py-8 text-center text-sm text-content-muted">Loading the audit log…</p>
         ) : (audit.data?.entries ?? []).length === 0 ? (
           <p className="px-4 py-8 text-center text-sm text-content-muted">Nothing recorded yet.</p>
         ) : (

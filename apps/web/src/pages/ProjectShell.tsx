@@ -1,7 +1,7 @@
 import { Outlet, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import ProjectTabs from "../components/ProjectTabs.js";
-import { Badge, Card, projectStateTone } from "../components/ui.js";
+import { Badge, Card, Loading, projectStateTone } from "../components/ui.js";
 import { api, ApiError } from "../lib/api.js";
 import { Link } from "react-router-dom";
 
@@ -20,7 +20,7 @@ export default function ProjectShell() {
   });
 
   if (isLoading) {
-    return <Card className="px-6 py-14 text-center text-sm text-content-muted">Loading…</Card>;
+    return <Loading rows={2} />;
   }
   if (error || !data) {
     return (

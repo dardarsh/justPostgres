@@ -183,7 +183,7 @@ function InsertRowModal({
         <Button variant="secondary" onClick={onClose}>
           Cancel
         </Button>
-        <Button disabled={insert.isPending} onClick={() => insert.mutate()}>
+        <Button loading={insert.isPending} onClick={() => insert.mutate()}>
           {insert.isPending ? "Inserting…" : "Insert row"}
         </Button>
       </div>
@@ -340,7 +340,7 @@ export default function DataPage() {
 
             <div className="min-h-0 flex-1 overflow-auto">
               {browse.isLoading ? (
-                <p className="p-6 text-sm text-content-muted">Loading…</p>
+                <p className="p-6 text-sm text-content-muted">Loading rows…</p>
               ) : browse.error ? (
                 <p className="p-6 text-sm text-danger">
                   {browse.error instanceof ApiError ? browse.error.message : "Could not read this table."}

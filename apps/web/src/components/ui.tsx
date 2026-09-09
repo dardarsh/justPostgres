@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import type { ProjectState } from "@justpostgres/shared";
 
 /**
@@ -127,6 +128,38 @@ export function Spinner({ className = "" }: { className?: string }) {
         strokeLinecap="round"
       />
     </svg>
+  );
+}
+
+/**
+ * Loading, as shape rather than a word.
+ *
+ * Every page said "Loading…", which tells you nothing about what is coming and
+ * makes the content jump when it arrives. Skeleton rows hold the space and
+ * imply the structure.
+ */
+export function Loading({ rows = 3, className = "" }: { rows?: number; className?: string }) {
+  return (
+    <Card className={`divide-y divide-border ${className}`} >
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className="flex items-center gap-4 px-5 py-4">
+          <div className="h-4 w-40 animate-pulse rounded bg-surface-sunken" />
+          <div className="h-4 w-24 animate-pulse rounded bg-surface-sunken" />
+          <div className="ml-auto h-4 w-20 animate-pulse rounded bg-surface-sunken" />
+        </div>
+      ))}
+      <span className="sr-only">Loading</span>
+    </Card>
+  );
+}
+
+/** A failed fetch, said once and consistently. */
+export function ErrorState({ message }: { message: string }) {
+  return (
+    <Card className="border-danger/30 px-6 py-12 text-center">
+      <p className="text-sm font-medium text-danger">Could not load this</p>
+      <p className="mx-auto mt-1.5 max-w-md text-sm leading-relaxed text-content-muted">{message}</p>
+    </Card>
   );
 }
 
@@ -312,7 +345,16 @@ export function Modal({
     };
   }, [onClose]);
 
-  return (
+  /*
+   * Rendered into document.body rather than in place.
+   *
+   * `position: fixed` is relative to the nearest ancestor with a transform,
+   * filter or backdrop-filter — not to the viewport. The header uses
+   * backdrop-blur, so a modal opened from the account menu was being clipped
+   * to the height of the header. A portal is the only reliable fix; moving the
+   * blur would just relocate the trap.
+   */
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -330,7 +372,8 @@ export function Modal({
         ) : null}
         <div className="mt-5">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

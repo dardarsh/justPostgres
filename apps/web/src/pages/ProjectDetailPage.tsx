@@ -3,15 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import type { ConnectionEndpoint, ProjectAction } from "@justpostgres/shared";
 import { api, ApiError } from "../lib/api.js";
-import {
-  Button,
-  Card,
-  CopyButton,
-  Modal,
-  ProgressBar,
-  formatBytes,
-  relativeTime,
-} from "../components/ui.js";
+import { Button, Card, CopyButton, Loading, Modal, ProgressBar, formatBytes, relativeTime } from "../components/ui.js";
 import ProjectMetricsCard from "../components/ProjectMetricsCard.js";
 
 function DeleteModal({
@@ -42,7 +34,7 @@ function DeleteModal({
           autoFocus
           value={typed}
           onChange={(e) => setTyped(e.target.value)}
-          className="w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-sm outline-none focus:border-danger"
+          className="w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-sm focus:border-danger"
         />
       </label>
 
@@ -211,7 +203,7 @@ export default function ProjectDetailPage() {
   });
 
   if (isLoading) {
-    return <Card className="px-6 py-14 text-center text-sm text-content-muted">Loading…</Card>;
+    return <Loading rows={3} />;
   }
 
   if (error || !data) {
@@ -239,17 +231,17 @@ export default function ProjectDetailPage() {
 
         <div className="flex gap-2">
           {project.state === "running" ? (
-            <Button variant="secondary" disabled={action.isPending} onClick={() => action.mutate("stop")}>
+            <Button variant="secondary" loading={action.isPending} onClick={() => action.mutate("stop")}>
               Stop
             </Button>
           ) : null}
           {project.state === "stopped" || project.state === "failed" ? (
-            <Button variant="secondary" disabled={action.isPending} onClick={() => action.mutate("start")}>
+            <Button variant="secondary" loading={action.isPending} onClick={() => action.mutate("start")}>
               Start
             </Button>
           ) : null}
           {project.state === "running" ? (
-            <Button variant="secondary" disabled={action.isPending} onClick={() => action.mutate("restart")}>
+            <Button variant="secondary" loading={action.isPending} onClick={() => action.mutate("restart")}>
               Restart
             </Button>
           ) : null}

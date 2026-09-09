@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import type { ExtensionState } from "@justpostgres/shared";
-import { Badge, Button, Card, Modal, PageHeader } from "../components/ui.js";
+import { Badge, Button, Card, Loading, Modal, PageHeader } from "../components/ui.js";
 import { api, ApiError } from "../lib/api.js";
 
 const CATEGORY_ORDER = [
@@ -218,7 +218,7 @@ export default function ExtensionsPage() {
       ) : null}
 
       {isLoading ? (
-        <Card className="px-6 py-14 text-center text-sm text-content-muted">Loading…</Card>
+        <Loading rows={4} />
       ) : loadError ? (
         <Card className="px-6 py-14 text-center text-sm text-danger">
           {loadError instanceof ApiError ? loadError.message : "Could not read the extension list."}

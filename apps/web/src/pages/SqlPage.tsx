@@ -170,13 +170,13 @@ export default function SqlPage() {
             Cmd/Ctrl + Enter to run · multiple statements run in order, outside a transaction
           </span>
           <div className="flex gap-2">
-            <Button variant="secondary" disabled={explain.isPending} onClick={() => explain.mutate(false)}>
+            <Button variant="secondary" loading={explain.isPending} onClick={() => explain.mutate(false)}>
               Explain
             </Button>
-            <Button variant="secondary" disabled={explain.isPending} onClick={() => explain.mutate(true)}>
+            <Button variant="secondary" loading={explain.isPending} onClick={() => explain.mutate(true)}>
               Explain analyze
             </Button>
-            <Button disabled={run.isPending} onClick={() => run.mutate(false)}>
+            <Button loading={run.isPending} onClick={() => run.mutate(false)}>
               {run.isPending ? "Running…" : "Run"}
             </Button>
           </div>

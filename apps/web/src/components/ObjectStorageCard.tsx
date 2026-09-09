@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ObjectStorageInput, StorageProvider } from "@justpostgres/shared";
-import { Badge, Button, Card } from "./ui.js";
+import { Badge, Button, Card, CardHeader } from "./ui.js";
 import { api, ApiError } from "../lib/api.js";
 
 const PROVIDERS: Array<{ id: StorageProvider; label: string; blurb: string }> = [
@@ -78,7 +78,7 @@ function Field({
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="mono mt-1 w-full rounded-md border border-border bg-surface-sunken px-3 py-2 text-sm outline-none focus:border-accent"
+        className="mono mt-1 w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-sm transition-colors placeholder:text-content-subtle hover:border-content-subtle focus:border-accent"
       />
       {hint ? <span className="mt-1 block text-xs text-content-subtle">{hint}</span> : null}
     </label>
@@ -156,24 +156,30 @@ export default function ObjectStorageCard() {
 
   return (
     <Card className="mb-6">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3.5">
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-medium">Backups in object storage</h2>
-            {configured ? <Badge tone="ok">configured</Badge> : <Badge tone="warn">local disk</Badge>}
-          </div>
-          <p className="mt-1 max-w-2xl text-xs text-content-muted">
-            Backups on the same disk as the database survive a dropped table and nothing else. Not the
-            host dying, not the disk filling, not someone removing the wrong volume. Point them at a
-            bucket and they survive all three.
-          </p>
-        </div>
-        {configured ? (
-          <Button variant="secondary" onClick={() => clear.mutate()} disabled={clear.isPending}>
-            Stop using it
-          </Button>
-        ) : null}
-      </div>
+      <CardHeader
+        title={
+          <span className="flex items-center gap-2">
+            Backups in object storage
+            {configured ? (
+              <Badge tone="ok" dot>
+                configured
+              </Badge>
+            ) : (
+              <Badge tone="warn" dot>
+                local disk
+              </Badge>
+            )}
+          </span>
+        }
+        description="Backups on the same disk as the database survive a dropped table and nothing else. Not the host dying, not the disk filling, not someone removing the wrong volume. Point them at a bucket and they survive all three."
+        actions={
+          configured ? (
+            <Button variant="secondary" size="sm" onClick={() => clear.mutate()} loading={clear.isPending}>
+              Stop using it
+            </Button>
+          ) : null
+        }
+      />
 
       <div className="border-b border-border px-4 py-3">
         <div className="flex flex-wrap gap-2">
@@ -184,7 +190,7 @@ export default function ObjectStorageCard() {
               onClick={() => set("provider", p.id)}
               className={`rounded-md border px-3 py-1.5 text-sm ${
                 form.provider === p.id
-                  ? "border-accent bg-accent/10 text-accent"
+                  ? "border-accent bg-accent-soft text-accent"
                   : "border-border hover:bg-surface-raised"
               }`}
             >
@@ -311,10 +317,10 @@ export default function ObjectStorageCard() {
           proven by the first backup.
         </p>
         <div className="flex gap-2">
-          <Button variant="secondary" onClick={() => test.mutate()} disabled={test.isPending}>
+          <Button variant="secondary" onClick={() => test.mutate()} loading={test.isPending}>
             {test.isPending ? "Testing…" : "Test connection"}
           </Button>
-          <Button onClick={() => save.mutate()} disabled={save.isPending}>
+          <Button onClick={() => save.mutate()} loading={save.isPending}>
             {save.isPending ? "Saving…" : configured ? "Update" : "Save"}
           </Button>
         </div>

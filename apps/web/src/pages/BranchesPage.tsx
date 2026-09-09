@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import type { BranchNode } from "@justpostgres/shared";
-import { Badge, Button, Card, Input, Modal, PageHeader, Select, relativeTime } from "../components/ui.js";
+import { Badge, Button, Card, Input, Loading, Modal, PageHeader, Select, relativeTime } from "../components/ui.js";
 import { api, ApiError } from "../lib/api.js";
 
 function toLocalInputValue(ms: number): string {
@@ -112,7 +112,7 @@ function CreateBranchModal({ projectId, onClose }: { projectId: string; onClose:
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button disabled={create.isPending} onClick={() => create.mutate()}>
+          <Button loading={create.isPending} onClick={() => create.mutate()}>
             {create.isPending ? "Creating…" : "Create branch"}
           </Button>
         </div>
@@ -211,7 +211,7 @@ export default function BranchesPage() {
       />
 
       {isLoading ? (
-        <Card className="px-6 py-14 text-center text-sm text-content-muted">Loading…</Card>
+        <Loading rows={3} />
       ) : error || !data ? (
         <Card className="px-6 py-14 text-center text-sm text-danger">
           {error instanceof ApiError ? error.message : "Could not load the branch tree."}
