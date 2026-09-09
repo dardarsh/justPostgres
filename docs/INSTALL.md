@@ -4,6 +4,7 @@ Three ways to run it. Pick one and follow it top to bottom — each is complete 
 
 | | Use this when | You get |
 |---|---|---|
+| **[0. Paste a compose file](#0-paste-a-compose-file)** | Your host has a "paste Docker Compose" box | `http://YOUR_IP:8080`, no shell needed |
 | **[A. Locally](#a-run-it-locally)** | Trying it out, or developing against it | `http://localhost:3000` |
 | **[B. On a VPS, no domain](#b-run-it-on-a-vps-without-a-domain)** | You have a server but no DNS yet | `http://YOUR_IP:8080` |
 | **[C. On a VPS with a domain](#c-run-it-on-a-vps-with-a-domain-and-https)** | Anything other people will use | `https://db.example.com` |
@@ -27,6 +28,65 @@ If Docker is missing on a Linux server:
 curl -fsSL https://get.docker.com | sh
 sudo usermod -aG docker $USER   # then log out and back in
 ```
+
+---
+
+# 0. Paste a compose file
+
+For hosts with a Docker Compose box — Hostinger, Coolify, Dokploy, Portainer — or anywhere you would
+rather not clone a repository. Nothing is built: every image is pulled from Docker Hub.
+
+### 1. Copy the file
+
+Take [`docker-compose.paste.yml`](../docker-compose.paste.yml) from this repository and paste the
+whole thing into your host's compose box.
+
+### 2. Change two lines
+
+Both are marked in the file, and nothing else needs touching.
+
+**`JP_MASTER_KEY`** appears twice — once for the control plane, once for the router, and **they must
+match**. Generate one:
+
+```bash
+openssl rand -base64 32
+```
+
+It encrypts every project's database password, and there is no recovery. Save it in a password
+manager before you deploy.
+
+**`JP_PUBLIC_HOST`** is your server's IP or hostname. It goes into the connection strings you hand to
+applications, so left as `localhost` every string you copy works on the server and nowhere else.
+
+### 3. Deploy
+
+Your host runs `docker compose up`. First start pulls about 900 MB of images, so give it a few
+minutes.
+
+### 4. Claim it
+
+There is no default account. Find the one-time setup token in the stack's logs:
+
+```
+docker compose logs control-plane | grep jp_setup
+```
+
+Most panels have a log viewer — search it for `jp_setup`. Then open `http://YOUR_SERVER_IP:8080` and
+create your account with that token.
+
+### 5. Firewall the project ports
+
+Projects publish their Postgres on ports **55000–55999** on every interface. Your clients do not need
+those — they connect through the router on 5432 and 6543. Close the range in your provider's
+firewall. See [SECURITY.md](SECURITY.md) for why this matters.
+
+### What this option cannot give you
+
+- **No HTTPS.** The admin login crosses the network in the clear. Fine for a server only you use;
+  for a team, do [option C](#c-run-it-on-a-vps-with-a-domain-and-https) and put a certificate in front.
+- **It needs the Docker socket.** justpostgres creates project containers through the Docker API. If
+  your host is a constrained PaaS that blocks socket mounts, this will not start, and no
+  configuration fixes it — you need a VPS where you control Docker.
 
 ---
 

@@ -6,9 +6,10 @@
 
 services:
   control-plane:
-    build:
-      context: .
-      dockerfile: apps/control-plane/Dockerfile
+    # Published, so a clone-and-run needs no build step. Developing on the
+    # control plane itself? `docker compose -f docker-compose.yml -f
+    # docker-compose.build.yml up -d --build` builds from source instead.
+    image: hiteshchoudhary/justpostgres-control-plane:${JP_VERSION:-latest}
     restart: unless-stopped
     depends_on:
       - docker-socket-proxy
@@ -52,9 +53,7 @@ services:
   # the control plane must not interrupt live database connections. It reads the
   # metadata store read-only and never depends on the control plane being up.
   router:
-    build:
-      context: .
-      dockerfile: apps/router/Dockerfile
+    image: hiteshchoudhary/justpostgres-router:${JP_VERSION:-latest}
     restart: unless-stopped
     environment:
       JP_DATA_DIR: /data

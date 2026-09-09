@@ -78,22 +78,26 @@ none yet — and the network-isolation fix described in that review.
 
 ## Install
 
-All you need is Docker.
+All you need is Docker. Nothing is built — every image is published.
 
 ```bash
-git clone https://github.com/justpostgres/justpostgres.git && cd justpostgres
+git clone https://github.com/hiteshchoudhary/justPostgres.git && cd justPostgres
 echo "JP_MASTER_KEY=$(openssl rand -base64 32)" > .env   # keep this; it has no recovery
-images/postgres/build.sh                                 # the project Postgres images
-docker compose up -d --build
+docker compose up -d
 docker compose logs control-plane | grep jp_setup        # the one-time setup token
 ```
 
 Open http://localhost:3000 and claim it with that token — there is no default account.
 
-**[The install guide](docs/INSTALL.md)** has three complete walkthroughs, each self-contained:
+**No shell?** If your host has a "paste Docker Compose" box — Hostinger, Coolify, Dokploy — paste
+[`docker-compose.paste.yml`](docker-compose.paste.yml), change the two lines it tells you to, and
+deploy.
+
+**[The install guide](docs/INSTALL.md)** has four complete walkthroughs, each self-contained:
 
 | | |
 |---|---|
+| **[Paste a compose file](docs/INSTALL.md#0-paste-a-compose-file)** | No repository, no shell — just your host's compose box |
 | **[Run it locally](docs/INSTALL.md#a-run-it-locally)** | On your own machine, at `localhost:3000` |
 | **[On a VPS, no domain](docs/INSTALL.md#b-run-it-on-a-vps-without-a-domain)** | Plain HTTP at `http://YOUR_IP:8080`, no certificate needed |
 | **[On a VPS, with a domain](docs/INSTALL.md#c-run-it-on-a-vps-with-a-domain-and-https)** | `https://db.example.com`, certificate issued and renewed for you |

@@ -154,7 +154,7 @@ const schema = z.object({
   JP_DATA_MAX_ROWS: z.coerce.number().int().min(10).max(100_000).default(1000),
 
   /** `{major}` is replaced with the project's Postgres major version. */
-  JP_POSTGRES_IMAGE_TEMPLATE: z.string().default("justpostgres/postgres:{major}"),
+  JP_POSTGRES_IMAGE_TEMPLATE: z.string().default("hiteshchoudhary/justpostgres-postgres:{major}"),
   JP_DEFAULT_PG_MAJOR: z.coerce.number().int().default(17),
   JP_DEFAULT_PROJECT_MEMORY_MB: z.coerce.number().int().min(128).default(512),
   JP_DEFAULT_PROJECT_CPUS: z.coerce.number().min(0.1).max(64).default(1),

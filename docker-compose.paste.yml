@@ -1,0 +1,125 @@
+# justpostgres — paste this whole file into your host's Docker Compose box.
+#
+# Works anywhere that runs `docker compose up` on a machine you control:
+# Hostinger, Coolify, Dokploy, Portainer, or plain SSH.
+#
+# ────────────────────────────────────────────────────────────────────────────
+#  BEFORE YOU DEPLOY, CHANGE TWO LINES
+#
+#  1. JP_MASTER_KEY — replace CHANGE_ME_RUN_openssl_rand_base64_32
+#
+#        openssl rand -base64 32
+#
+#     This encrypts every project's database password. There is no recovery:
+#     lose it and your databases keep running with nothing able to authenticate
+#     to them. Save it in a password manager before you deploy, not after.
+#
+#  2. JP_PUBLIC_HOST — your server's IP or hostname.
+#
+#     It is what goes into the connection strings you hand to applications.
+#     Left as localhost, every string you copy works on the server and nowhere
+#     else.
+#
+#  Everything else has a working default.
+# ────────────────────────────────────────────────────────────────────────────
+#
+#  AFTER IT STARTS
+#
+#  There is no default account. The first boot prints a one-time setup token;
+#  find it in this stack's control-plane logs:
+#
+#      docker compose logs control-plane | grep jp_setup
+#
+#  Open http://YOUR_SERVER_IP:8080 and claim it with that token.
+#
+#  Then firewall ports 55000-55999. Projects publish their Postgres there on
+#  every interface, and your clients do not need it — they connect through the
+#  router on 5432 and 6543. See docs/SECURITY.md.
+#
+#  Full guide: https://github.com/hiteshchoudhary/justPostgres/blob/main/docs/INSTALL.md
+
+services:
+  control-plane:
+    image: hiteshchoudhary/justpostgres-control-plane:latest
+    restart: unless-stopped
+    depends_on:
+      - docker-socket-proxy
+    environment:
+      # ---- CHANGE THESE TWO ---------------------------------------------
+      JP_MASTER_KEY: CHANGE_ME_RUN_openssl_rand_base64_32
+      JP_PUBLIC_HOST: localhost
+      # -------------------------------------------------------------------
+
+      JP_PORT: 3000
+      JP_DATA_DIR: /data
+      JP_DOCKER_HOST: tcp://docker-socket-proxy:2375
+      JP_LOG_LEVEL: info
+
+      # Reachable from outside the server. Without a certificate in front, the
+      # admin login crosses the network in the clear — fine on a private
+      # network or for a server only you use, not for a team. Put a proxy in
+      # front and set this back to 127.0.0.1 when you have a domain.
+      JP_BIND_ADDR: 0.0.0.0
+
+      JP_ROUTER_ENABLED: "true"
+      JP_ROUTER_PUBLIC_HOST: localhost
+      JP_PROJECT_CONNECT_HOST: host.docker.internal
+      JP_PORT_RANGE_START: 55000
+      JP_PORT_RANGE_END: 55999
+    ports:
+      - "0.0.0.0:8080:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # Projects, credentials and backup configuration. The one thing on this
+      # host you cannot rebuild — back it up from Instance -> Metadata store.
+      - control-plane-data:/data
+
+  # The data path. Separate from the control plane on purpose: restarting or
+  # upgrading the control plane must not interrupt live database connections.
+  router:
+    image: hiteshchoudhary/justpostgres-router:latest
+    restart: unless-stopped
+    environment:
+      JP_DATA_DIR: /data
+      JP_MASTER_KEY: CHANGE_ME_RUN_openssl_rand_base64_32
+      JP_ROUTER_BACKEND_HOST: host.docker.internal
+      JP_LOG_LEVEL: info
+    ports:
+      - "0.0.0.0:5432:5432"
+      - "0.0.0.0:6543:6543"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - control-plane-data:/data:ro
+
+  # The control plane needs the Docker API to create project containers, and
+  # that API is root-equivalent on the host. This proxy allowlists only the
+  # endpoints it actually uses, so a compromised control plane is not
+  # additionally a trivial host takeover.
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:0.3.0
+    restart: unless-stopped
+    environment:
+      VERSION: 1
+      INFO: 1
+      CONTAINERS: 1
+      IMAGES: 1
+      VOLUMES: 1
+      NETWORKS: 1
+      EXEC: 1
+      POST: 1
+      AUTH: 0
+      SECRETS: 0
+      SWARM: 0
+      SYSTEM: 0
+      PLUGINS: 0
+      CONFIGS: 0
+      NODES: 0
+      SERVICES: 0
+      TASKS: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+volumes:
+  control-plane-data:

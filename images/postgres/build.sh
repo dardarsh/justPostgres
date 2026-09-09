@@ -4,22 +4,24 @@
 #   ./build.sh            # build every supported major
 #   ./build.sh 17         # build one
 #
-# Until these are published to a registry, the control plane can only provision
-# majors that have been built locally.
+# These are published to Docker Hub, so building them is optional — the control
+# plane pulls what it needs. Build locally when you are changing the image
+# itself: provisioning resolves images local-first, so a locally built tag wins
+# over the published one without any configuration.
 set -euo pipefail
 
-REGISTRY="${JP_IMAGE_REGISTRY:-justpostgres}"
+REGISTRY="${JP_IMAGE_REGISTRY:-hiteshchoudhary}"
 MAJORS=("${@:-16 17 18}")
 read -ra MAJORS <<< "${MAJORS[*]}"
 
 cd "$(dirname "$0")"
 
 for major in "${MAJORS[@]}"; do
-  tag="${REGISTRY}/postgres:${major}"
+  tag="${REGISTRY}/justpostgres-postgres:${major}"
   echo "==> building ${tag}"
   docker build --build-arg "PG_MAJOR=${major}" -t "${tag}" .
 done
 
 echo
 echo "Built: ${MAJORS[*]}"
-docker images "${REGISTRY}/postgres" --format '  {{.Repository}}:{{.Tag}}  {{.Size}}'
+docker images "${REGISTRY}/justpostgres-postgres" --format '  {{.Repository}}:{{.Tag}}  {{.Size}}'

@@ -1,0 +1,17 @@
+# Build from source instead of pulling published images.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+#
+# For working on the control plane or the router. Everyone else pulls, which is
+# why the base file no longer carries a build step: cloning a repository to run
+# a released tool should not mean compiling it first.
+services:
+  control-plane:
+    build:
+      context: .
+      dockerfile: apps/control-plane/Dockerfile
+
+  router:
+    build:
+      context: .
+      dockerfile: apps/router/Dockerfile
