@@ -19,24 +19,38 @@ env:
   NAMESPACE: hiteshchoudhary
 
 jobs:
-  # The two service images. Small, and they share a build context.
+  # The two service images, built on native runners rather than under emulation.
+  #
+  # Emulating arm64 on an amd64 runner means QEMU interpreting a full pnpm
+  # install, a native better-sqlite3 compile and a Vite build. It is slow and it
+  # exhausts the runner. GitHub gives public repositories free arm64 runners, so
+  # each architecture builds on its own machine at native speed and a third job
+  # stitches the two into one multi-arch tag.
   services:
-    runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         include:
           - name: control-plane
             dockerfile: apps/control-plane/Dockerfile
+            platform: linux/amd64
+            runner: ubuntu-latest
+          - name: control-plane
+            dockerfile: apps/control-plane/Dockerfile
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
           - name: router
             dockerfile: apps/router/Dockerfile
+            platform: linux/amd64
+            runner: ubuntu-latest
+          - name: router
+            dockerfile: apps/router/Dockerfile
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
 
-      - id: version
-        run: echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-        if: startsWith(github.ref, 'refs/tags/')
-
-      - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
 
       - uses: docker/login-action@v3
@@ -44,19 +58,58 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - uses: docker/build-push-action@v6
+      # Pushed by digest, with no tag. The merge job below turns the pair into
+      # the tags people actually pull.
+      - id: build
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ${{ matrix.dockerfile }}
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            ${{ env.NAMESPACE }}/justpostgres-${{ matrix.name }}:${{ steps.version.outputs.value || inputs.version }}
-            ${{ env.NAMESPACE }}/justpostgres-${{ matrix.name }}:latest
-          # Layer cache in the registry, so a second image and a later release
-          # do not rebuild the same Node dependencies from scratch.
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,name=${{ env.NAMESPACE }}/justpostgres-${{ matrix.name }},push-by-digest=true,name-canonical=true,push=true
+
+      - name: Save the digest
+        run: |
+          mkdir -p /tmp/digests
+          echo "${{ steps.build.outputs.digest }}" > "/tmp/digests/${{ matrix.name }}-$(echo '${{ matrix.platform }}' | tr / -)"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: digest-${{ matrix.name }}-${{ strategy.job-index }}
+          path: /tmp/digests/*
+          retention-days: 1
+
+  # Combine the per-architecture images into one tag each.
+  manifest:
+    needs: services
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        name: [control-plane, router]
+    steps:
+      - id: version
+        run: echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+        if: startsWith(github.ref, 'refs/tags/')
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digest-${{ matrix.name }}-*
+          merge-multiple: true
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Create the multi-arch tags
+        run: |
+          REPO="${{ env.NAMESPACE }}/justpostgres-${{ matrix.name }}"
+          VERSION="${{ steps.version.outputs.value || inputs.version }}"
+          REFS=""
+          for f in /tmp/digests/*; do REFS="$REFS ${REPO}@$(cat "$f")"; done
+          docker buildx imagetools create -t "${REPO}:${VERSION}" -t "${REPO}:latest" $REFS
+          docker buildx imagetools inspect "${REPO}:${VERSION}"
 
   # One job per major so they build in parallel. Each is a slow apt install and
   # they are independent.
