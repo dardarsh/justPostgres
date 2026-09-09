@@ -14,12 +14,18 @@ WORKDIR /app
 # Built in its own stage so the toolchain needed to compile better-sqlite3
 # never reaches the runtime image.
 FROM base AS prod-deps
+# Every workspace member's package.json, not just the ones this image runs.
+# pnpm resolves `workspace:*` against the whole workspace, so a missing
+# manifest fails `--frozen-lockfile` — and only on a cold cache, which is why
+# this passed locally for weeks and failed the first time CI built it.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends python3 make g++ \
  && rm -rf /var/lib/apt/lists/*
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY packages/shared/package.json packages/shared/
+COPY packages/secrets/package.json packages/secrets/
 COPY apps/control-plane/package.json apps/control-plane/
+COPY apps/router/package.json apps/router/
 COPY apps/web/package.json apps/web/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile --prod --filter @justpostgres/control-plane...
@@ -32,7 +38,9 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.base.json ./
 COPY packages/shared/package.json packages/shared/
+COPY packages/secrets/package.json packages/secrets/
 COPY apps/control-plane/package.json apps/control-plane/
+COPY apps/router/package.json apps/router/
 COPY apps/web/package.json apps/web/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 COPY . .
